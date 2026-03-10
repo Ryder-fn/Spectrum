@@ -1,0 +1,31 @@
+name: Update JSON on Release
+
+on:
+  release:
+    types: [published] 
+
+jobs:
+  update-json:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write 
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Update update.json
+        run: |
+          TAG_NAME="${{ github.event.release.tag_name }}"
+          
+          EXE_URL="https://github.com/${{ github.repository }}/releases/download/${TAG_NAME}/program.exe"
+
+          jq --arg ver "$TAG_NAME" --arg url "$EXE_URL" '.version = $ver | .url = $url' update.json > temp.json && mv temp.json update.json
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add update.json
+          git commit -m "Update update.json to version ${{ github.event.release.tag_name }}"
+          git push
